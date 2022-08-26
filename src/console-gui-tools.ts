@@ -20,10 +20,16 @@ const HOST = "127.0.0.1";
 let mode: Mode = "random";
 
 const clientManager = new EventEmitter();
-const gui = createGui();
 
-const { server, connectedClients, lastErr, tcpCounter }: ListeningServer =
-  createServer(clientManager, PORT, HOST);
+const gui = createGui();
+gui.on("exit", closeApp);
+
+const {
+  server,
+  connectedClients,
+  lastErr,
+  tcpCounter,
+}: ListeningServer = createServer(clientManager, PORT, HOST);
 server.on("error", gui.error);
 
 let min = 9;
@@ -177,8 +183,6 @@ function updateConsole() {
 
   gui.setPage(p, 0);
 }
-
-gui.on("exit", closeApp);
 
 const CONFIRM_CHOICES = ["Yes", "No", "?"] as const;
 
