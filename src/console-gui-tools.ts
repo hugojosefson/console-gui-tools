@@ -14,37 +14,8 @@ import {
 
 const PORT = 9090;
 const HOST = "127.0.0.1";
-type Period =
-  | 10
-  | 100
-  | 250
-  | 500
-  | 1000
-  | 2000
-  | 5000
-  | 10000
-  | 20000
-  | 30000
-  | 60000
-  | 120000
-  | 300000
-  | 600000
-  | 900000
-  | 1800000
-  | 3600000
-  | 7200000
-  | 14400000
-  | 28800000
-  | 43200000
-  | 86400000;
 
-let period: Period = 100;
-
-const Modes = ["random", "linear"] as const;
-type Mode = typeof Modes[number];
-let mode: Mode = "random";
-
-const periodList: Period[] = [
+const PERIODS = [
   10,
   100,
   250,
@@ -67,7 +38,14 @@ const periodList: Period[] = [
   28800000,
   43200000,
   86400000,
-];
+] as const;
+
+type Period = typeof PERIODS[number];
+let period: Period = 100;
+
+const MODES = ["random", "linear"] as const;
+type Mode = typeof MODES[number];
+let mode: Mode = "random";
 
 const clientManager = new EventEmitter();
 
@@ -286,7 +264,7 @@ GUI.on("keypressed", (key: { name: string }) => {
       new OptionPopup(
         "popupSelectMode",
         "Select simulation mode",
-        Modes,
+        MODES,
         mode,
       ).show().on("confirm", (_mode: Mode) => {
         mode = _mode;
@@ -298,7 +276,7 @@ GUI.on("keypressed", (key: { name: string }) => {
       new OptionPopup(
         "popupSelectPeriod",
         "Select simulation period",
-        periodList,
+        PERIODS,
         period,
       ).show().on("confirm", (_period: Period) => {
         new ButtonPopup(
