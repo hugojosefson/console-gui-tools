@@ -1,8 +1,6 @@
 import {
   ButtonPopup,
   ConfirmPopup,
-  ConsoleManager,
-  createServer,
   CustomPopup,
   EventEmitter,
   FileSelectorPopup,
@@ -10,89 +8,23 @@ import {
   KeyListenerArgs,
   OptionPopup,
   PageBuilder,
-  Socket,
 } from "../deps.ts";
+import { Period, PERIODS } from "./period.ts";
+import { Mode, MODES } from "./mode.ts";
+import { createGui } from "./gui.ts";
+import { createServer, ListeningServer } from "./server.ts";
 
 const PORT = 9090;
 const HOST = "127.0.0.1";
 
-const PERIODS = [
-  10,
-  100,
-  250,
-  500,
-  1000,
-  2000,
-  5000,
-  10000,
-  20000,
-  30000,
-  60000,
-  120000,
-  300000,
-  600000,
-  900000,
-  1800000,
-  3600000,
-  7200000,
-  14400000,
-  28800000,
-  43200000,
-  86400000,
-] as const;
-
-type Period = typeof PERIODS[number];
-let period: Period = 100;
-
-const MODES = ["random", "linear"] as const;
-type Mode = typeof MODES[number];
 let mode: Mode = "random";
 
 const clientManager = new EventEmitter();
+const gui = createGui();
 
-const gui: ConsoleManager & EventEmitter = new ConsoleManager({
-  title: "TCP Simulator", // Title of the console
-  logPageSize: 20, // Number of lines to show in logs page
-  logLocation: 1, // Location of the logs page
-  layoutOptions: {
-    boxed: true, // Set to true to enable boxed layout
-    showTitle: true, // Set to false in order to hide title
-    changeFocusKey: "ctrl+l", // Change layout with ctrl+l to switch to the logs page
-    type: "double", // Set to 'double' to enable double layout
-    direction: "vertical", // Set to 'horizontal' to enable horizontal layout
-    boxColor: "yellow",
-    boxStyle: "bold",
-  },
-}) as ConsoleManager & EventEmitter;
-
-let connectedClients = 0;
-
-// The number of TCP message sent since start
-let tcpCounter = 0;
-
-// Make A TCP Server that listens on port 9090
-const server = createServer(undefined, (socket: Socket) => {
-  connectedClients++;
-  //drawGui()
-  clientManager.on("send", (data) => {
-    socket.write(data + "\n");
-    tcpCounter++;
-  });
-  socket.on("error", function (err: Error) {
-    lastErr = `Error:  ${err.stack}`;
-  });
-  socket.on("end", function () {
-    lastErr = "Error: Client disconnected!";
-    connectedClients--;
-  });
-}).listen({ port: PORT, hostname: HOST });
-
-let lastErr = "";
-
-server.on("error", (err) => {
-  lastErr = `Error: ${err.message}`;
-  gui.error(lastErr);
-});
+const { server, connectedClients, lastErr, tcpCounter }: ListeningServer =
+  createServer(clientManager, PORT, HOST);
+server.on("error", gui.error);
 
 let min = 9;
 let max = 12;
@@ -140,6 +72,8 @@ const sendValuesAsCsv = () => {
   clientManager.emit("send", csv);
   drawGui();
 };
+
+export let period: Period = 100;
 
 /**
  * @description Updates the console screen
