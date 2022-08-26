@@ -144,7 +144,7 @@ const sendValuesAsCsv = () => {
 /**
  * @description Updates the console screen
  */
-const updateConsole = () => {
+function updateConsole() {
   const p = new PageBuilder();
   p.addRow({ text: "TCP server simulator app! Welcome...", color: "yellow" });
   p.addRow({ text: `TCP Server listening on ${HOST}:${PORT}`, color: "green" });
@@ -240,7 +240,7 @@ const updateConsole = () => {
   );
 
   gui.setPage(p, 0);
-};
+}
 
 gui.on("exit", closeApp);
 
@@ -368,9 +368,9 @@ gui.on("keypressed", (key: KeyListenerArgs) => {
   }
 });
 
-const drawGui = () => {
+function drawGui() {
   updateConsole();
-};
+}
 
 function closeApp() {
   console.clear();
