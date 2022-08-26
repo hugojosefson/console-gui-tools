@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+IFS=$'\n\t'
+
+main() {
+  local dir
+  dir="$(cd "$(dirname "$0")" && pwd)"
+
+  exec deno run \
+    --unstable \
+    --allow-env \
+    --allow-read \
+    --allow-net \
+    "$@" \
+    "${dir}"/src/console-gui-tools.ts
+}
+
+main "$@"
