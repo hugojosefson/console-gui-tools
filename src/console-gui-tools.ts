@@ -31,7 +31,7 @@ let max = 12;
 
 let values = [0, 0, 0, 0, 0, 0];
 
-const frame = async () => {
+async function frame() {
   switch (mode) {
     case "random":
       await updateWithRandomValues();
@@ -43,7 +43,7 @@ const frame = async () => {
       break;
   }
   await sendValuesAsCsv();
-};
+}
 
 let valueEmitter: undefined | number = undefined; //setInterval(frame, period)
 
@@ -51,11 +51,13 @@ type Direction = 0 | 1;
 const direction: Direction[] = [1, 0, 1, 1, 0, 0]; // 1 = Up
 const step = 0.01;
 
-const updateWithRandomValues = () => {
-  values = values.map(() => Math.random() * (max - min) + min);
-};
+function updateWithRandomValues() {
+  values = values.map(
+    () => min + Math.random() * (max - min),
+  );
+}
 
-const updateWithLinearValues = () => {
+function updateWithLinearValues() {
   // Generate linear values using direction and max/min values
   values = values.map((value, index) => {
     if (value >= max) {
@@ -65,13 +67,13 @@ const updateWithLinearValues = () => {
     }
     return direction[index] === 1 ? value + step : value - step;
   });
-};
+}
 
-const sendValuesAsCsv = () => {
+function sendValuesAsCsv() {
   const csv = values.map((v) => v.toFixed(4)).join(",");
   clientManager.emit("send", csv);
   drawGui();
-};
+}
 
 export let period: Period = 100;
 
@@ -180,125 +182,140 @@ gui.on("exit", closeApp);
 
 const CONFIRM_CHOICES = ["Yes", "No", "?"] as const;
 
-gui.on("keypressed", (key: KeyListenerArgs) => {
-  switch (key.name) {
-    case "space":
-      if (valueEmitter) {
-        clearInterval(valueEmitter);
-        valueEmitter = undefined;
-      } else {
-        valueEmitter = setInterval(frame, period);
-      }
-      break;
-    case "m":
-      (new OptionPopup(
-        "popupSelectMode",
-        "Select simulation mode",
-        [...MODES],
-        mode,
-      ).show() as OptionPopup & EventEmitter).on("confirm", (_mode: Mode) => {
-        mode = _mode;
-        gui.warn(`NEW MODE: ${mode}`);
-        drawGui();
-      });
-      break;
-    case "s":
-      (new OptionPopup(
-        "popupSelectPeriod",
-        "Select simulation period",
-        [...PERIODS],
-        period,
-      ).show() as OptionPopup & EventEmitter).on(
+type KeyHandler = (key: KeyListenerArgs) => void;
+const KEY_HANDLERS: Record<string, KeyHandler> = {
+  "space": () => {
+    if (valueEmitter) {
+      clearInterval(valueEmitter);
+      valueEmitter = undefined;
+    } else {
+      valueEmitter = setInterval(frame, period);
+    }
+  },
+  "m": () => {
+    (new OptionPopup(
+      "popupSelectMode",
+      "Select simulation mode",
+      [...MODES],
+      mode,
+    ).show() as OptionPopup & EventEmitter).on("confirm", (_mode: Mode) => {
+      mode = _mode;
+      gui.warn(`NEW MODE: ${mode}`);
+      drawGui();
+    });
+  },
+  "s": () => {
+    const popupSelectPeriod = new OptionPopup(
+      "popupSelectPeriod",
+      "Select simulation period",
+      [...PERIODS],
+      period,
+    ).show() as OptionPopup & EventEmitter;
+
+    popupSelectPeriod.on(
+      "confirm",
+      (_period: Period) => {
+        const popupConfirmPeriod = new ButtonPopup(
+          "popupConfirmPeriod",
+          "Confirm period",
+          `Period set to ${_period} ms, apply?`,
+          [...CONFIRM_CHOICES],
+        ).show() as ButtonPopup & EventEmitter;
+
+        popupConfirmPeriod.on(
+          "confirm",
+          (answer: typeof CONFIRM_CHOICES[number]) => {
+            if (answer === "Yes") {
+              period = _period;
+              gui.warn(`NEW PERIOD: ${period}`);
+            } else if (answer === "?") {
+              gui.info("Choose ok to confirm period");
+            }
+            drawGui();
+          },
+        );
+      },
+    );
+  },
+  "h": () => {
+    (new InputPopup("popupTypeMax", "Type max value", max, true).show() as
+      & InputPopup
+      & EventEmitter).on(
         "confirm",
-        (_period: Period) => {
-          (new ButtonPopup(
-            "popupConfirmPeriod",
-            "Confirm period",
-            `Period set to ${_period} ms, apply?`,
-            [...CONFIRM_CHOICES],
-          ).show() as ButtonPopup & EventEmitter).on(
-            "confirm",
-            (answer: typeof CONFIRM_CHOICES[number]) => {
-              if (answer === "Yes") {
-                period = _period;
-                gui.warn(`NEW PERIOD: ${period}`);
-              } else if (answer === "?") {
-                gui.info("Choose ok to confirm period");
-              }
-              drawGui();
-            },
-          );
+        (_max: number) => {
+          max = _max;
+          gui.warn(`NEW MAX VALUE: ${max}`);
+          drawGui();
         },
       );
-      break;
-    case "h":
-      (new InputPopup("popupTypeMax", "Type max value", max, true).show() as
-        & InputPopup
-        & EventEmitter).on(
-          "confirm",
-          (_max: number) => {
-            max = _max;
-            gui.warn(`NEW MAX VALUE: ${max}`);
-            drawGui();
-          },
-        );
-      break;
-    case "l":
-      (new InputPopup("popupTypeMin", "Type min value", min, true).show() as
-        & InputPopup
-        & EventEmitter).on(
-          "confirm",
-          (_min: number) => {
-            min = _min;
-            gui.warn(`NEW MIN VALUE: ${min}`);
-            drawGui();
-          },
-        );
-      break;
-    case "1":
-      {
-        const p = new PageBuilder(5); // Add a scroll limit, so it will be scrollable with up and down
-        p.addRow({
-          text: "Example of a custom popup content!",
-          color: "yellow",
-        });
-        p.addRow({ text: "This is a custom popup!", color: "green" });
-        p.addRow({ text: "It can be used to show a message,", color: "green" });
-        p.addRow({ text: "or to show variables.", color: "green" });
-        p.addRow({ text: "TCP Message sent: ", color: "green" }, {
-          text: `${tcpCounter}`,
-          color: "white",
-        });
-        p.addRow({ text: "Connected clients: ", color: "green" }, {
-          text: `${connectedClients}`,
-          color: "white",
-        });
-        p.addRow({ text: "Mode: ", color: "green" }, {
-          text: `${mode}`,
-          color: "white",
-        });
-        p.addRow({ text: "Message period: ", color: "green" }, {
-          text: `${period} ms`,
-          color: "white",
-        });
-        new CustomPopup("popupCustom1", "See that values", p, 32).show();
-      }
-      break;
-    case "f":
-      new FileSelectorPopup("popupFileManager", "File Manager", "./").show();
-      break;
-    case "q":
-      (new ConfirmPopup(
-        "popupQuit",
-        "Are you sure you want to quit?",
-        undefined,
-      ).show() as ConfirmPopup & EventEmitter).on(
+  },
+  "l": () => {
+    (new InputPopup("popupTypeMin", "Type min value", min, true).show() as
+      & InputPopup
+      & EventEmitter).on(
         "confirm",
-        () => closeApp(),
+        (_min: number) => {
+          min = _min;
+          gui.warn(`NEW MIN VALUE: ${min}`);
+          drawGui();
+        },
       );
-      break;
-    default:
-      break;
+  },
+  "1": () => {
+    {
+      const p = new PageBuilder(5); // Add a scroll limit, so it will be scrollable with up and down
+      p.addRow({
+        text: "Example of a custom popup content!",
+        color: "yellow",
+      });
+      p.addRow({ text: "This is a custom popup!", color: "green" });
+      p.addRow({ text: "It can be used to show a message,", color: "green" });
+      p.addRow({ text: "or to show variables.", color: "green" });
+      p.addRow({ text: "TCP Message sent: ", color: "green" }, {
+        text: `${tcpCounter}`,
+        color: "white",
+      });
+      p.addRow({ text: "Connected clients: ", color: "green" }, {
+        text: `${connectedClients}`,
+        color: "white",
+      });
+      p.addRow({ text: "Mode: ", color: "green" }, {
+        text: `${mode}`,
+        color: "white",
+      });
+      p.addRow({ text: "Message period: ", color: "green" }, {
+        text: `${period} ms`,
+        color: "white",
+      });
+      new CustomPopup("popupCustom1", "See that values", p, 32).show();
+    }
+  },
+  "f": () => {
+    new FileSelectorPopup("popupFileManager", "File Manager", "./").show();
+  },
+  "q": (key) => {
+    if (key.shift) {
+      closeApp();
+      return;
+    }
+
+    (new ConfirmPopup(
+      "popupQuit",
+      "Are you sure you want to quit?",
+      undefined,
+    ).show() as ConfirmPopup & EventEmitter).on(
+      "confirm",
+      () => closeApp(),
+    );
+  },
+};
+
+gui.on("keypressed", (key: KeyListenerArgs) => {
+  const keyHandler: KeyHandler | undefined = KEY_HANDLERS[key.name];
+  if (keyHandler) {
+    keyHandler(key);
+  } else {
+    gui.warn(`Unknown key: ${key.name}`);
   }
 });
 
