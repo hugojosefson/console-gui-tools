@@ -7,6 +7,7 @@ import {
   EventEmitter,
   FileSelectorPopup,
   InputPopup,
+  KeyListenerArgs,
   OptionPopup,
   PageBuilder,
   Socket,
@@ -49,7 +50,7 @@ let mode: Mode = "random";
 
 const clientManager = new EventEmitter();
 
-const GUI = new ConsoleManager({
+const gui: ConsoleManager & EventEmitter = new ConsoleManager({
   title: "TCP Simulator", // Title of the console
   logPageSize: 20, // Number of lines to show in logs page
   logLocation: 1, // Location of the logs page
@@ -62,7 +63,7 @@ const GUI = new ConsoleManager({
     boxColor: "yellow",
     boxStyle: "bold",
   },
-});
+}) as ConsoleManager & EventEmitter;
 
 let connectedClients = 0;
 
@@ -90,7 +91,7 @@ let lastErr = "";
 
 server.on("error", (err) => {
   lastErr = `Error: ${err.message}`;
-  GUI.error(lastErr);
+  gui.error(lastErr);
 });
 
 let min = 9;
@@ -161,45 +162,48 @@ const updateConsole = () => {
   }, { text: ` ${tcpCounter}`, color: "white" });
 
   // Print if simulator is running or not
-  if (!valueEmitter) {
-    p.addRow({ text: "Simulator is not running! ", color: "red" }, {
-      text: "press 'space' to start",
+  if (typeof valueEmitter === "number") {
+    p.addRow({ text: "Simulator is running! ", color: "green" }, {
+      text: "press 'space' to stop",
       color: "white",
     });
   } else {
-    p.addRow({ text: "Simulator is running! ", color: "green" }, {
-      text: "press 'space' to stop",
+    p.addRow({ text: "Simulator is not running! ", color: "red" }, {
+      text: "press 'space' to start",
       color: "white",
     });
   }
 
   // Print mode:
-  p.addRow({ text: "Mode: ", color: "cyan" }, {
-    text: `${mode}`,
-    color: "white",
-  });
+  p.addRow(
+    { text: "Mode: ", color: "cyan" },
+    { text: mode, color: "white" },
+  );
 
   // Print message frequency:
-  p.addRow({ text: "Message period: ", color: "cyan" }, {
-    text: `${period} ms`,
-    color: "white",
-  });
+  p.addRow(
+    { text: "Message period: ", color: "cyan" },
+    { text: `${period} ms`, color: "white" },
+  );
 
   // Print Min and Max
-  p.addRow({ text: "Min: ", color: "cyan" }, {
-    text: `${min}`,
-    color: "white",
-  });
-  p.addRow({ text: "Max: ", color: "cyan" }, {
-    text: `${max}`,
-    color: "white",
-  });
+  p.addRow(
+    { text: "Min: ", color: "cyan" },
+    { text: `${min}`, color: "white" },
+  );
+  p.addRow(
+    { text: "Max: ", color: "cyan" },
+    { text: `${max}`, color: "white" },
+  );
 
   // Print current values:
-  p.addRow({ text: "Values: ", color: "cyan" }, {
-    text: ` ${values.map((v) => v.toFixed(4)).join("   ")}`,
-    color: "white",
-  });
+  p.addRow(
+    { text: "Values: ", color: "cyan" },
+    {
+      text: " " + values.map((v) => v.toFixed(4)).join("   "),
+      color: "white",
+    },
+  );
 
   // Spacer
   p.addSpacer();
@@ -210,47 +214,39 @@ const updateConsole = () => {
   }
 
   p.addRow({ text: "Commands:", color: "white", bg: "black" });
-  p.addRow({ text: "  'space'", color: "gray", bold: true }, {
-    text: "   - Start/stop simulator",
-    color: "white",
-    italic: true,
-  });
-  p.addRow({ text: "  'm'", color: "gray", bold: true }, {
-    text: "       - Select simulation mode",
-    color: "white",
-    italic: true,
-  });
-  p.addRow({ text: "  's'", color: "gray", bold: true }, {
-    text: "       - Select message period",
-    color: "white",
-    italic: true,
-  });
-  p.addRow({ text: "  'h'", color: "gray", bold: true }, {
-    text: "       - Set max value",
-    color: "white",
-    italic: true,
-  });
-  p.addRow({ text: "  'l'", color: "gray", bold: true }, {
-    text: "       - Set min value",
-    color: "white",
-    italic: true,
-  });
-  p.addRow({ text: "  'q'", color: "gray", bold: true }, {
-    text: "       - Quit",
-    color: "white",
-    italic: true,
-  });
+  p.addRow(
+    { text: "  'space'", color: "gray", bold: true },
+    { text: "   - Start/stop simulator", color: "white", italic: true },
+  );
+  p.addRow(
+    { text: "  'm'", color: "gray", bold: true },
+    { text: "       - Select simulation mode", color: "white", italic: true },
+  );
+  p.addRow(
+    { text: "  's'", color: "gray", bold: true },
+    { text: "       - Select message period", color: "white", italic: true },
+  );
+  p.addRow(
+    { text: "  'h'", color: "gray", bold: true },
+    { text: "       - Set max value", color: "white", italic: true },
+  );
+  p.addRow(
+    { text: "  'l'", color: "gray", bold: true },
+    { text: "       - Set min value", color: "white", italic: true },
+  );
+  p.addRow(
+    { text: "  'q'", color: "gray", bold: true },
+    { text: "       - Quit", color: "white", italic: true },
+  );
 
-  GUI.setPage(p, 0);
+  gui.setPage(p, 0);
 };
 
-GUI.on("exit", () => {
-  closeApp();
-});
+gui.on("exit", closeApp);
 
 const CONFIRM_CHOICES = ["Yes", "No", "?"] as const;
 
-GUI.on("keypressed", (key: { name: string }) => {
+gui.on("keypressed", (key: KeyListenerArgs) => {
   switch (key.name) {
     case "space":
       if (valueEmitter) {
@@ -261,59 +257,69 @@ GUI.on("keypressed", (key: { name: string }) => {
       }
       break;
     case "m":
-      new OptionPopup(
+      (new OptionPopup(
         "popupSelectMode",
         "Select simulation mode",
-        MODES,
+        [...MODES],
         mode,
-      ).show().on("confirm", (_mode: Mode) => {
+      ).show() as OptionPopup & EventEmitter).on("confirm", (_mode: Mode) => {
         mode = _mode;
-        GUI.warn(`NEW MODE: ${mode}`);
+        gui.warn(`NEW MODE: ${mode}`);
         drawGui();
       });
       break;
     case "s":
-      new OptionPopup(
+      (new OptionPopup(
         "popupSelectPeriod",
         "Select simulation period",
-        PERIODS,
+        [...PERIODS],
         period,
-      ).show().on("confirm", (_period: Period) => {
-        new ButtonPopup(
-          "popupConfirmPeriod",
-          "Confirm period",
-          `Period set to ${_period} ms, apply?`,
-          CONFIRM_CHOICES,
-        ).show().on("confirm", (answer: typeof CONFIRM_CHOICES[number]) => {
-          if (answer === "Yes") {
-            period = _period;
-            GUI.warn(`NEW PERIOD: ${period}`);
-          } else if (answer === "?") {
-            GUI.info("Choose ok to confirm period");
-          }
-          drawGui();
-        });
-      });
+      ).show() as OptionPopup & EventEmitter).on(
+        "confirm",
+        (_period: Period) => {
+          (new ButtonPopup(
+            "popupConfirmPeriod",
+            "Confirm period",
+            `Period set to ${_period} ms, apply?`,
+            [...CONFIRM_CHOICES],
+          ).show() as ButtonPopup & EventEmitter).on(
+            "confirm",
+            (answer: typeof CONFIRM_CHOICES[number]) => {
+              if (answer === "Yes") {
+                period = _period;
+                gui.warn(`NEW PERIOD: ${period}`);
+              } else if (answer === "?") {
+                gui.info("Choose ok to confirm period");
+              }
+              drawGui();
+            },
+          );
+        },
+      );
       break;
     case "h":
-      new InputPopup("popupTypeMax", "Type max value", max, true).show().on(
-        "confirm",
-        (_max: number) => {
-          max = _max;
-          GUI.warn(`NEW MAX VALUE: ${max}`);
-          drawGui();
-        },
-      );
+      (new InputPopup("popupTypeMax", "Type max value", max, true).show() as
+        & InputPopup
+        & EventEmitter).on(
+          "confirm",
+          (_max: number) => {
+            max = _max;
+            gui.warn(`NEW MAX VALUE: ${max}`);
+            drawGui();
+          },
+        );
       break;
     case "l":
-      new InputPopup("popupTypeMin", "Type min value", min, true).show().on(
-        "confirm",
-        (_min: number) => {
-          min = _min;
-          GUI.warn(`NEW MIN VALUE: ${min}`);
-          drawGui();
-        },
-      );
+      (new InputPopup("popupTypeMin", "Type min value", min, true).show() as
+        & InputPopup
+        & EventEmitter).on(
+          "confirm",
+          (_min: number) => {
+            min = _min;
+            gui.warn(`NEW MIN VALUE: ${min}`);
+            drawGui();
+          },
+        );
       break;
     case "1":
       {
@@ -348,7 +354,11 @@ GUI.on("keypressed", (key: { name: string }) => {
       new FileSelectorPopup("popupFileManager", "File Manager", "./").show();
       break;
     case "q":
-      new ConfirmPopup("popupQuit", "Are you sure you want to quit?").show().on(
+      (new ConfirmPopup(
+        "popupQuit",
+        "Are you sure you want to quit?",
+        undefined,
+      ).show() as ConfirmPopup & EventEmitter).on(
         "confirm",
         () => closeApp(),
       );
@@ -362,13 +372,13 @@ const drawGui = () => {
   updateConsole();
 };
 
-const closeApp = () => {
+function closeApp() {
   console.clear();
   clearInterval(valueEmitter);
   server.close();
 
   Deno.setRaw(Deno.stdin.rid, false);
   Deno.exit(0);
-};
+}
 
 drawGui();

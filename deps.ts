@@ -14,6 +14,7 @@ export {
   CustomPopup,
   FileSelectorPopup,
   InputPopup,
+  type KeyListenerArgs,
   OptionPopup,
   PageBuilder,
 } from "npm:console-gui-tools@1.1.31";
