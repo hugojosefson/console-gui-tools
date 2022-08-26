@@ -78,14 +78,11 @@ function updateWithLinearValues() {
 function sendValuesAsCsv() {
   const csv = values.map((v) => v.toFixed(4)).join(",");
   clientManager.emit("send", csv);
-  drawGui();
+  updateConsole();
 }
 
 export let period: Period = 100;
 
-/**
- * @description Updates the console screen
- */
 function updateConsole() {
   const p = new PageBuilder();
   p.addRow({ text: "TCP server simulator app! Welcome...", color: "yellow" });
@@ -196,18 +193,22 @@ const KEY_HANDLERS: Record<string, KeyHandler> = {
       valueEmitter = setInterval(frame, period);
     }
   },
+
   "m": () => {
-    (new OptionPopup(
+    const popupSelectMode = new OptionPopup(
       "popupSelectMode",
       "Select simulation mode",
       [...MODES],
       mode,
-    ).show() as OptionPopup & EventEmitter).on("confirm", (_mode: Mode) => {
+    ).show() as OptionPopup & EventEmitter;
+
+    popupSelectMode.on("confirm", (_mode: Mode) => {
       mode = _mode;
       gui.warn(`NEW MODE: ${mode}`);
-      drawGui();
+      updateConsole();
     });
   },
+
   "s": () => {
     const popupSelectPeriod = new OptionPopup(
       "popupSelectPeriod",
@@ -235,97 +236,111 @@ const KEY_HANDLERS: Record<string, KeyHandler> = {
             } else if (answer === "?") {
               gui.info("Choose ok to confirm period");
             }
-            drawGui();
+            updateConsole();
           },
         );
       },
     );
   },
+
   "h": () => {
-    (new InputPopup("popupTypeMax", "Type max value", max, true).show() as
+    const popupTypeMax = new InputPopup(
+      "popupTypeMax",
+      "Type max value",
+      max,
+      true,
+    ).show() as
       & InputPopup
-      & EventEmitter).on(
-        "confirm",
-        (_max: number) => {
-          max = _max;
-          gui.warn(`NEW MAX VALUE: ${max}`);
-          drawGui();
-        },
-      );
+      & EventEmitter;
+
+    popupTypeMax.on(
+      "confirm",
+      (_max: number) => {
+        max = _max;
+        gui.warn(`NEW MAX VALUE: ${max}`);
+        updateConsole();
+      },
+    );
   },
+
   "l": () => {
-    (new InputPopup("popupTypeMin", "Type min value", min, true).show() as
+    const popupTypeMin = new InputPopup(
+      "popupTypeMin",
+      "Type min value",
+      min,
+      true,
+    ).show() as
       & InputPopup
-      & EventEmitter).on(
-        "confirm",
-        (_min: number) => {
-          min = _min;
-          gui.warn(`NEW MIN VALUE: ${min}`);
-          drawGui();
-        },
-      );
+      & EventEmitter;
+
+    popupTypeMin.on(
+      "confirm",
+      (_min: number) => {
+        min = _min;
+        gui.warn(`NEW MIN VALUE: ${min}`);
+        updateConsole();
+      },
+    );
   },
   "1": () => {
-    {
-      const p = new PageBuilder(5); // Add a scroll limit, so it will be scrollable with up and down
-      p.addRow({
-        text: "Example of a custom popup content!",
-        color: "yellow",
-      });
-      p.addRow({ text: "This is a custom popup!", color: "green" });
-      p.addRow({ text: "It can be used to show a message,", color: "green" });
-      p.addRow({ text: "or to show variables.", color: "green" });
-      p.addRow({ text: "TCP Message sent: ", color: "green" }, {
-        text: `${tcpCounter}`,
-        color: "white",
-      });
-      p.addRow({ text: "Connected clients: ", color: "green" }, {
-        text: `${connectedClients}`,
-        color: "white",
-      });
-      p.addRow({ text: "Mode: ", color: "green" }, {
-        text: `${mode}`,
-        color: "white",
-      });
-      p.addRow({ text: "Message period: ", color: "green" }, {
-        text: `${period} ms`,
-        color: "white",
-      });
-      new CustomPopup("popupCustom1", "See that values", p, 32).show();
-    }
+    const p = new PageBuilder(5); // Add a scroll limit, so it will be scrollable with up and down
+    p.addRow({
+      text: "Example of a custom popup content!",
+      color: "yellow",
+    });
+    p.addRow({ text: "This is a custom popup!", color: "green" });
+    p.addRow({ text: "It can be used to show a message,", color: "green" });
+    p.addRow({ text: "or to show variables.", color: "green" });
+    p.addRow({ text: "TCP Message sent: ", color: "green" }, {
+      text: `${tcpCounter}`,
+      color: "white",
+    });
+    p.addRow({ text: "Connected clients: ", color: "green" }, {
+      text: `${connectedClients}`,
+      color: "white",
+    });
+    p.addRow({ text: "Mode: ", color: "green" }, {
+      text: `${mode}`,
+      color: "white",
+    });
+    p.addRow({ text: "Message period: ", color: "green" }, {
+      text: `${period} ms`,
+      color: "white",
+    });
+    new CustomPopup("popupCustom1", "See that values", p, 32).show();
   },
+
   "f": () => {
     new FileSelectorPopup("popupFileManager", "File Manager", "./").show();
   },
+
   "q": (key) => {
     if (key.shift) {
       closeApp();
       return;
     }
 
-    (new ConfirmPopup(
+    const popupQuit = new ConfirmPopup(
       "popupQuit",
       "Are you sure you want to quit?",
       undefined,
-    ).show() as ConfirmPopup & EventEmitter).on(
-      "confirm",
-      () => closeApp(),
-    );
+    ).show() as ConfirmPopup & EventEmitter;
+
+    popupQuit.on("confirm", closeApp);
   },
 };
 
-gui.on("keypressed", (key: KeyListenerArgs) => {
-  const keyHandler: KeyHandler | undefined = KEY_HANDLERS[key.name];
-  if (keyHandler) {
-    keyHandler(key);
-  } else {
-    gui.warn(`Unknown key: ${key.name}`);
-  }
-});
-
-function drawGui() {
-  updateConsole();
-}
+gui.on(
+  "keypressed",
+  (key: KeyListenerArgs) => {
+    const keyHandler: KeyHandler | undefined = KEY_HANDLERS[key.name];
+    if (keyHandler) {
+      keyHandler(key);
+    } else {
+      gui.warn(`Unknown key: ${key.name}`);
+    }
+  },
+);
 
 function closeApp() {
   console.clear();
@@ -336,4 +351,4 @@ function closeApp() {
   Deno.exit(0);
 }
 
-drawGui();
+updateConsole();
